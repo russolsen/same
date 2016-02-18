@@ -182,7 +182,7 @@ func IsSameValue(x, y reflect.Value)bool {
 		}
 
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		 return x.Int() == y.Int()
+		 return x.Uint() == y.Uint()
 
 	case reflect.String:
 		//log.Println("string result", x.String() == y.String())
