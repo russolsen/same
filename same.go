@@ -2,26 +2,26 @@ package same
 
 import (
 	"log"
-	"reflect"
 	"math"
+	"reflect"
 )
 
-func isIntKind(k reflect.Kind)bool {
+func isIntKind(k reflect.Kind) bool {
 	switch k {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		return true
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return true
 	default:
-		log.Println("NOT Int types")
 		return false
 	}
 }
 
-func isFloatKind(k reflect.Kind)bool {
+func isFloatKind(k reflect.Kind) bool {
 	switch k {
 	case reflect.Float32, reflect.Float64:
 		return true
 	default:
-		log.Println("NOT float types")
 		return false
 	}
 }
@@ -55,7 +55,6 @@ func isSameArray(x, y reflect.Value) bool {
 	lx := x.Len()
 
 	if lx != y.Len() {
-		log.Println("lens dont match:", lx, y.Len())
 		return false
 	}
 
@@ -63,18 +62,29 @@ func isSameArray(x, y reflect.Value) bool {
 		xElement := x.Index(i)
 		yElement := y.Index(i)
 		if !IsSame(xElement.Interface(), yElement.Interface()) {
-			log.Println("element ",i,"of array", x," doesn't match")
 			return false
 		}
 	}
 	return true
 }
 
+type StringConvertable interface {
+	String() string
+}
 
-// isSameStruct returns true if the two struct values are the same length
+// isSameUnknownStruct returns true if the two struct values are the same length
 // and have the same contents as defined by IsSame. This function explicitly
 // ignores the declared type of the struct.
 func isSameStruct(x, y reflect.Value) bool {
+
+	sx, okx := x.Interface().(StringConvertable)
+	sy, oky := x.Interface().(StringConvertable)
+
+	if okx && oky {
+		//log.Println("Stringable", x, y)
+		return sx.String() == sy.String()
+	}
+
 	numFields := x.NumField()
 
 	if numFields != y.NumField() {
@@ -87,8 +97,10 @@ func isSameStruct(x, y reflect.Value) bool {
 		path := []int{i}
 		vx := x.FieldByIndex(path)
 		vy := y.FieldByName(typeX.Field(i).Name)
-		if ! IsSame(vx.Interface(), vy.Interface()) {
-			return false
+		if vx.CanInterface() && vy.CanInterface() {
+			if !IsSame(vx.Interface(), vy.Interface()) {
+				return false
+			}
 		}
 	}
 
@@ -115,7 +127,6 @@ func isSameMap(x, y reflect.Value) bool {
 
 	return dmX.IsSame(dmY)
 }
-
 
 // IsSame defines a fairly lose idea of structual equality. Two values
 // are the same if they are integers and their int64 values are equal.
@@ -145,60 +156,66 @@ func unwindPointer(x reflect.Value) reflect.Value {
 
 	return reflect.ValueOf(x.Interface())
 }
-	
+
+func getInt64(x reflect.Value) int64 {
+	switch x.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return x.Int()
+
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return int64(x.Uint())
+	default:
+		panic("Not an int")
+	}
+}
 
 const Epsilon = 1.0E-5
 
 // IsSameThing compares two non-pointer values.
-func IsSameValue(x, y reflect.Value)bool {
-	
+func IsSameValue(x, y reflect.Value) bool {
+
 	x = unwindPointer(x)
 	y = unwindPointer(y)
 
 	kindX := x.Kind()
 	kindY := y.Kind()
 
-	//log.Println(">>>>Is same value:", x, kindX, y, kindY)
-
 	if !isCompatibleKinds(kindX, kindY) {
-		log.Println("Not compatible kinds:", kindX, kindY)
 		return false
 	}
 
 	switch kindX {
-		
+
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		//log.Println("int result", x.Int() == y.Int())
-		 return x.Int() == y.Int()
+		return getInt64(x) == getInt64(y)
 
 	case reflect.Float32, reflect.Float64:
 		//log.Println("***Same float!!", x, y)
 		xf := x.Float()
 		yf := y.Float()
 		if xf == yf {
-			 return true
+			return true
 		} else {
-			 return math.Abs(xf - yf) < Epsilon
+			return math.Abs(xf-yf) < Epsilon
 		}
 
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		 return x.Uint() == y.Uint()
+		return getInt64(x) == getInt64(y)
 
 	case reflect.String:
-		//log.Println("string result", x.String() == y.String())
-		 return x.String() == y.String()
+		return x.String() == y.String()
 
 	case reflect.Bool:
-		 return x.Bool() == y.Bool()
+		return x.Bool() == y.Bool()
 
 	case reflect.Array, reflect.Slice:
-		 return isSameArray(x, y)
+		return isSameArray(x, y)
 
 	case reflect.Map:
-		 return isSameMap(x, y)
+		return isSameMap(x, y)
 
 	case reflect.Struct:
-		 return isSameStruct(x, y)
+		return isSameStruct(x, y)
 
 	default:
 		log.Println("IsSame: **** What is:", x, kindX)

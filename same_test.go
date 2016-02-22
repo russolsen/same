@@ -20,7 +20,7 @@ func VerifyDifferent(t *testing.T, v1, v2 interface{}) {
 
 type XString string
 
-func XTestSameValueDifferentType(t *testing.T) {
+func TestSameValueDifferentType(t *testing.T) {
 	var a string
 	var b interface{}
 
@@ -30,7 +30,7 @@ func XTestSameValueDifferentType(t *testing.T) {
 	VerifySame(t, a, b)
 }
 
-func XTestSimpleValues(t *testing.T){
+func TestSimpleValues(t *testing.T){
 	VerifySame(t, true, true)
 	VerifySame(t, false, false)
 	VerifyDifferent(t, true, false)
@@ -50,6 +50,15 @@ func XTestSimpleValues(t *testing.T){
 	VerifySame(t, int16(1), 1)
 	VerifySame(t, int32(1), 1)
 	VerifySame(t, int64(1), 1)
+
+	VerifySame(t, uint64(1), int8(1))
+	VerifySame(t, uint8(1), int64(1))
+
+	VerifySame(t, uint64(1), int16(1))
+	VerifySame(t, uint16(16), int64(16))
+
+	VerifySame(t, int64(1), int32(1))
+	VerifySame(t, int32(1), int64(1))
 
 	VerifySame(t, 1.23, 1.23)
 
@@ -73,7 +82,7 @@ func XTestSimpleValues(t *testing.T){
 	VerifySame(t, false, false)
 }
 
-func XTestArrays(t *testing.T) {
+func TestArrays(t *testing.T) {
 	intArray := []int{1,2,3}
 	int8Array := []int8{1,2,3}
 	int16Array := []int16{1,2,3}
